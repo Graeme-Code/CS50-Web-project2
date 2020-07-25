@@ -13,11 +13,23 @@
 <p>Number of Bids: {{bid_count}}</p>
 <p>Highest Bid: {{highest_bid}}</p> <!-- ok so here I need to get the highest bid in view and pass it through via context -->
 
+
 <form action="{% url 'listing' listing.id %}" method="post">
     {% csrf_token %}
     {{newbid}}
     <input  type="submit">
 </form>
+
+
+<p>Comment Auther{{comments.user}}</p>
+<p>Comment: {{comments.comment}}</p>
+
+<form action="{% url 'listing' listing.id %}" method="post">
+    {% csrf_token %}
+    {{newcomment}}
+    <input  type="submit">
+</form>
+
 
     
 {% endblock %}

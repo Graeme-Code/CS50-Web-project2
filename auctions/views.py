@@ -5,7 +5,7 @@ from django.shortcuts import render
 from django.urls import reverse
 from django import forms
 
-from .models import User, Listing, Bids
+from .models import User, Listing, Bids, Comments
 
 class CreateListing(forms.Form): #note to self classes are in camelcase! 
     title = forms.CharField(label='Listing Title', max_length=64, min_length=4)
@@ -17,21 +17,29 @@ class CreateListing(forms.Form): #note to self classes are in camelcase!
 class NewBid(forms.Form):
     newbid = forms.IntegerField(label="New Bid") #This will need validation to ensure new bid is greater than old bid
 
+class NewComment(forms.Form):
+    newcomment = forms.CharField(widget=forms.Textarea)
+
 def index(request):
     return render(request, "auctions/index.html", {
         "active_listings":Listing.objects.all()
     })
 
 def listing(request, listing_id):
-    if request.method == "POST":
+    if request.method == "POST": #will need if statement handling to know what is been posted
         listing = Listing.objects.get(pk=listing_id)
         user = User.objects.get(pk = int(request.user.id))
         user_id = user.id
-        newbid_value = request.POST['newbid']
-        newbid = Bids(bid=newbid_value, listing_id=listing_id, user_id=user_id)
-        newbid.save()
+        if 'newbid' in request.POST:
+            newbid_value = request.POST['newbid']
+            newbid = Bids(bid=newbid_value, listing_id=listing_id, user_id=user_id)
+            newbid.save()
+        elif 'newcomment' in request.POST:
+            newcomment_value = request.POST['newcomment']
+            newcomment = Comments(comment=newcomment_value,listing_id=listing_id, user_id=user_id)
+            newcomment.save()
         return HttpResponseRedirect(reverse("listing",args=([listing_id]),
-        ))
+            ))
     else:
         #get listing
         listing = Listing.objects.get(pk=listing_id)
@@ -39,16 +47,27 @@ def listing(request, listing_id):
         bids = Bids.objects.filter(listing_id=listing_id).order_by("-bid")
         #get number of bids
         bids_count = bids.count()
-        #get the highest bid
-        highest_bid = bids.first().bid
+        #handle no bids instance. 
+        if bids_count == 0:
+            bid_count = "No bids"
+            highest_bid ="No bids"
+        else:
+            highest_bid = bids.first().bid
+
+        #get comments
+        try:
+            comments = Comments.objects.get(listing_id=listing_id)
+        except:
+            comments = "No comments" #reminder, use if statement view to dynamically render this. 
+        
         return render(request, "auctions/listing.html", {
             "listing":listing,
             "bid_count": bids_count,
             "highest_bid": highest_bid,
-            "newbid": NewBid
+            "newbid": NewBid,
+            "comments": comments,
+            "newcomment":NewComment
         })
-
-
 
 def login_view(request):
     if request.method == "POST":
@@ -87,7 +106,6 @@ def register(request):
             return render(request, "auctions/register.html", {
                 "message": "Passwords must match."
             })
-
         # Attempt to create new user
         try:
             user = User.objects.create_user(username, email, password)

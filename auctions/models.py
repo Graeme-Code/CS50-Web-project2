@@ -25,9 +25,12 @@ class Listing(models.Model):
 class Comments(models.Model):
     comment = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
-    #listing = 
-    #user = 
-    pass
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True)
+    listing = models.ForeignKey(Listing, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f"Comment {self.comment} listing ID:{self.listing.id} Username:{self.user})"
+
 
 class Bids(models.Model):
     #starting bid ID #this should be in the listing model
