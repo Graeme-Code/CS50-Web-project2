@@ -1,0 +1,23 @@
+{% extends "auctions/layout.html" %}
+
+{% block body %}
+    <h2>{{listing.title}}</h2>
+ 
+<p>Created At: {{listing.created_at}}</p>
+<p>Description: {{listing.description}}</p>
+<p>Category: {{listing.category}}</p>
+<p>Active:{{listing.active}}</p>
+<p>Photo:{{listing.imageURL}}</p>
+<p>User: {{listing.user}}</p>
+<p>Starting Bid: {{listing.starting_bid}}</p>
+<p>Number of Bids: {{bid_count}}</p>
+<p>Highest Bid: {{highest_bid}}</p> <!-- ok so here I need to get the highest bid in view and pass it through via context -->
+
+<form action="{% url 'listing' listing.id %}" method="post">
+    {% csrf_token %}
+    {{newbid}}
+    <input  type="submit">
+</form>
+
+    
+{% endblock %}
