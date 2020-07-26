@@ -3,6 +3,7 @@
 {% block body %}
     <h2>{{listing.title}}</h2>
  
+
 <p>Created At: {{listing.created_at}}</p>
 <p>Description: {{listing.description}}</p>
 <p>Category: {{listing.category}}</p>
@@ -20,9 +21,10 @@
     <input  type="submit">
 </form>
 
-
-<p>Comment Auther{{comments.user}}</p>
-<p>Comment: {{comments.comment}}</p>
+{% for comment in comments %}
+<p>Comment Auther{{comment.user}}</p>
+<p>Comment: {{comment.comment}}</p>
+{% endfor %}
 
 <form action="{% url 'listing' listing.id %}" method="post">
     {% csrf_token %}
@@ -30,6 +32,11 @@
     <input  type="submit">
 </form>
 
+
+<form action="{% url 'listing' listing.id %}" method="post">
+    {% csrf_token %}
+    <input type="submit" name="watchlist" value="Add to watchlist"/>
+</form>
 
     
 {% endblock %}

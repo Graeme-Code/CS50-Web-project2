@@ -26,18 +26,27 @@ def index(request):
     })
 
 def listing(request, listing_id):
-    if request.method == "POST": #will need if statement handling to know what is been posted
+    if request.method == "POST": 
+        print(request)
         listing = Listing.objects.get(pk=listing_id)
         user = User.objects.get(pk = int(request.user.id))
         user_id = user.id
+        #handle different post requests from listing view
         if 'newbid' in request.POST:
             newbid_value = request.POST['newbid']
             newbid = Bids(bid=newbid_value, listing_id=listing_id, user_id=user_id)
             newbid.save()
         elif 'newcomment' in request.POST:
             newcomment_value = request.POST['newcomment']
+            print(newcomment_value)
             newcomment = Comments(comment=newcomment_value,listing_id=listing_id, user_id=user_id)
             newcomment.save()
+        elif 'watchlist' in request.POST:
+            print(user_id)
+            print(user)
+            watchlist_item = listing.watchlist.add(user)
+            print(watchlist_item)
+
         return HttpResponseRedirect(reverse("listing",args=([listing_id]),
             ))
     else:
@@ -56,10 +65,10 @@ def listing(request, listing_id):
 
         #get comments
         try:
-            comments = Comments.objects.get(listing_id=listing_id)
+            comments = Comments.objects.filter(listing_id=listing_id)
         except:
             comments = "No comments" #reminder, use if statement view to dynamically render this. 
-        
+
         return render(request, "auctions/listing.html", {
             "listing":listing,
             "bid_count": bids_count,
@@ -139,4 +148,32 @@ def createlisting(request):
             'form':CreateListing()
             })
 
+def categories(request):
+    #all_listings = list(Listing.objects.values('category').distinct())
+    return render(request, "auctions/categories.html", {
+        'categories': list(Listing.objects.values('category').distinct())
+    })
+
+def category(request, category):
+    print(category)
+    cateogry = category
+    category_listing = Listing.objects.filter(category=category)
+    print(category_listing)
+    return render(request, "auctions/category.html", {
+        'category_listing': category_listing,
+        'category': category
+    })
+
+def watchlist(request):
+    
+    #get user Id
+    user = User.objects.get(pk = int(request.user.id))
+    #get items on users waatchlist
+    watchedlistings = Listing.objects.filter(watchlist = user)
+   
+
+    return render(request, "auctions/watchlist.html",{
+        'watchedlistings':watchedlistings
+
+    })
     
