@@ -8,7 +8,7 @@ from django import forms
 
 from .models import User, Listing, Bids, Comments
 
-class CreateListing(forms.Form): #note to self classes are in camelcase! 
+class CreateListing(forms.Form): 
     title = forms.CharField(label='Listing Title', max_length=64, min_length=4, widget=forms.TextInput(attrs={'class': 'form-control'}))
     description = forms.CharField(widget=forms.Textarea(attrs={'class': 'form-control'}))
     category = forms.CharField(label='Category', max_length=64, widget=forms.TextInput(attrs={'class': 'form-control'}))
@@ -29,7 +29,6 @@ def index(request):
 def listing(request, listing_id):
     #to refactor this so function checks if user is login in requires making each of these its own function with decortor and calling these functions indside of this method. 
     if request.method == "POST": 
-        print(request)
         listing = Listing.objects.get(pk=listing_id)
         user = User.objects.get(pk = int(request.user.id))
         user_id = user.id
@@ -101,10 +100,13 @@ def listing(request, listing_id):
 
         #Check if vistor is auther
         is_author = False
-        user = User.objects.get(pk = int(request.user.id))
-        author = listing.user
-        if author == user:
-            is_author = True
+        try:
+            user = User.objects.get(pk = int(request.user.id))
+            author = listing.user
+            if author == user:
+                is_author = True
+        except:
+            is_author = False
 
         #Check if user is creator of highest bid when listing is closed
         is_winner = False
@@ -182,8 +184,6 @@ def createlisting(request):
         starting_bid = request.POST['starting_bid']
         user = request.user.id #this gives me the user name. 
         user_id = User.objects.get(pk = int(user)) #trying to get rest of data of user
-        print(user)
-        print(user_id)
         newlisting = Listing(title=title, description=description, category=category, imageURL=imageURL, starting_bid=starting_bid)
         newlisting.user = user_id
         newlisting.save()
@@ -200,10 +200,8 @@ def categories(request):
     })
 
 def category(request, category):
-    print(category)
     cateogry = category
     category_listing = Listing.objects.filter(category=category)
-    print(category_listing)
     return render(request, "auctions/category.html", {
         'category_listing': category_listing,
         'category': category
