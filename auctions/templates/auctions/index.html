@@ -15,7 +15,7 @@
             <td><a href="{%url 'listing' listing.id %}">{{listing.title}}</td></a>
             <td>{{listing.description}}</td>
             <td>{{listing.starting_bid}}</td>
-            <td>{{listing.imageURL}}</td>
+            <td><img src="{{listing.imageURL}}" width="20" height="30"></td>
         </tr>
     {%endfor%}
     

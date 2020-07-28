@@ -2,29 +2,42 @@
 
 {% block body %}
     <h2>{{listing.title}}</h2>
- 
+
+
+<!-- need a boolean value to know if vistor is auther-->
+{% if is_author %}
+<form action="{% url 'listing' listing.id %}" method="post">
+    {% csrf_token %}
+    <input type="submit" name="close" value="Close Listing"/>
+</form>
+{% endif %}
+
+<!-- need a boolean value to know if vistor is winner-->
+{% if is_winner %}
+<h2>You win the auction!</h2>
+{% endif %}
 
 <p>Created At: {{listing.created_at}}</p>
 <p>Description: {{listing.description}}</p>
 <p>Category: {{listing.category}}</p>
 <p>Active:{{listing.active}}</p>
-<p>Photo:{{listing.imageURL}}</p>
-<p>User: {{listing.user}}</p>
+<img src="{{listing.imageURL}}" width="200" height="300">
+<p>Created By: {{listing.user}}</p>
 <p>Starting Bid: {{listing.starting_bid}}</p>
 <p>Number of Bids: {{bid_count}}</p>
 <p>Highest Bid: {{highest_bid}}</p> <!-- ok so here I need to get the highest bid in view and pass it through via context -->
-
-
-<form action="{% url 'listing' listing.id %}" method="post">
-    {% csrf_token %}
-    {{newbid}}
-    <input  type="submit">
-</form>
 
 {% for comment in comments %}
 <p>Comment Auther{{comment.user}}</p>
 <p>Comment: {{comment.comment}}</p>
 {% endfor %}
+
+{% if user.is_authenticated %}
+<form action="{% url 'listing' listing.id %}" method="post">
+    {% csrf_token %}
+    {{newbid}}
+    <input  type="submit">
+</form>
 
 <form action="{% url 'listing' listing.id %}" method="post">
     {% csrf_token %}
@@ -32,11 +45,12 @@
     <input  type="submit">
 </form>
 
-
 <form action="{% url 'listing' listing.id %}" method="post">
     {% csrf_token %}
     <input type="submit" name="watchlist" value="Add to watchlist"/>
 </form>
+
+{% endif %}
 
     
 {% endblock %}

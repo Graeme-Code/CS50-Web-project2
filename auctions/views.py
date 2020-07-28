@@ -1,4 +1,5 @@
 from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render
@@ -8,44 +9,71 @@ from django import forms
 from .models import User, Listing, Bids, Comments
 
 class CreateListing(forms.Form): #note to self classes are in camelcase! 
-    title = forms.CharField(label='Listing Title', max_length=64, min_length=4)
-    description = forms.CharField(widget=forms.Textarea)
-    category = forms.CharField(label='Category', max_length=64)
-    imageURL = forms.URLField()
-    starting_bid = forms.IntegerField(label="Starting Bid")
+    title = forms.CharField(label='Listing Title', max_length=64, min_length=4, widget=forms.TextInput(attrs={'class': 'form-control'}))
+    description = forms.CharField(widget=forms.Textarea(attrs={'class': 'form-control'}))
+    category = forms.CharField(label='Category', max_length=64, widget=forms.TextInput(attrs={'class': 'form-control'}))
+    imageURL = forms.URLField(widget=forms.TextInput(attrs={'class': 'form-control'}))
+    starting_bid = forms.IntegerField(label="Starting Bid", widget=forms.TextInput(attrs={'class': 'form-control'}))
 
 class NewBid(forms.Form):
-    newbid = forms.IntegerField(label="New Bid") #This will need validation to ensure new bid is greater than old bid
+    newbid = forms.IntegerField(label="New Bid",widget=forms.TextInput(attrs={'class': 'form-control'})) #This will need validation to ensure new bid is greater than old bid
 
 class NewComment(forms.Form):
-    newcomment = forms.CharField(widget=forms.Textarea)
+    newcomment = forms.CharField(widget=forms.Textarea(attrs={'class': 'form-control'}))
 
 def index(request):
     return render(request, "auctions/index.html", {
-        "active_listings":Listing.objects.all()
+        "active_listings":Listing.objects.filter(active=True)
     })
 
 def listing(request, listing_id):
+    #to refactor this so function checks if user is login in requires making each of these its own function with decortor and calling these functions indside of this method. 
     if request.method == "POST": 
         print(request)
         listing = Listing.objects.get(pk=listing_id)
         user = User.objects.get(pk = int(request.user.id))
         user_id = user.id
+        
+        #get bid info
+        bids = Bids.objects.filter(listing_id=listing_id).order_by("-bid")
+        #get number of bids
+        bids_count = bids.count()
+        #handle no bids instance. 
+        if bids_count == 0:
+            bid_count = "No bids"
+            highest_bid = 0
+        else:
+            highest_bid = int(bids.first().bid)
+
         #handle different post requests from listing view
         if 'newbid' in request.POST:
-            newbid_value = request.POST['newbid']
-            newbid = Bids(bid=newbid_value, listing_id=listing_id, user_id=user_id)
-            newbid.save()
+            newbid_value = int(request.POST['newbid'])
+            if newbid_value < listing.starting_bid:
+                message = "bid must be greater than starting bid"
+                return render(request, "auctions/error.html", {
+                    "message":message
+                })
+    
+            elif newbid_value <= highest_bid:
+                message = "bid must be greater than highest bid"
+                return render(request, "auctions/error.html", {
+                    "message":message
+                })
+            else:
+                newbid = Bids(bid=newbid_value, listing_id=listing_id, user_id=user_id)
+                newbid.save()
         elif 'newcomment' in request.POST:
             newcomment_value = request.POST['newcomment']
-            print(newcomment_value)
             newcomment = Comments(comment=newcomment_value,listing_id=listing_id, user_id=user_id)
             newcomment.save()
         elif 'watchlist' in request.POST:
-            print(user_id)
-            print(user)
             watchlist_item = listing.watchlist.add(user)
-            print(watchlist_item)
+
+        elif 'close' in request.POST:
+            #code to close auction. 
+            listing.active = False
+            listing.save()
+            
 
         return HttpResponseRedirect(reverse("listing",args=([listing_id]),
             ))
@@ -56,26 +84,42 @@ def listing(request, listing_id):
         bids = Bids.objects.filter(listing_id=listing_id).order_by("-bid")
         #get number of bids
         bids_count = bids.count()
+        #create default for hightest bid user
+        highest_bid_user = "No one"
         #handle no bids instance. 
         if bids_count == 0:
             bid_count = "No bids"
-            highest_bid ="No bids"
+            highest_bid = 0
         else:
             highest_bid = bids.first().bid
-
+            highest_bid_user = bids.first().user
         #get comments
         try:
             comments = Comments.objects.filter(listing_id=listing_id)
         except:
             comments = "No comments" #reminder, use if statement view to dynamically render this. 
 
+        #Check if vistor is auther
+        is_author = False
+        user = User.objects.get(pk = int(request.user.id))
+        author = listing.user
+        if author == user:
+            is_author = True
+
+        #Check if user is creator of highest bid when listing is closed
+        is_winner = False
+        if listing.active == False and user == highest_bid_user:
+            is_winner = True
+            
         return render(request, "auctions/listing.html", {
             "listing":listing,
             "bid_count": bids_count,
             "highest_bid": highest_bid,
             "newbid": NewBid,
             "comments": comments,
-            "newcomment":NewComment
+            "newcomment":NewComment,
+            "is_author":is_author,
+            "is_winner":is_winner
         })
 
 def login_view(request):
@@ -128,6 +172,7 @@ def register(request):
     else:
         return render(request, "auctions/register.html")
 
+@login_required(login_url='/login/') 
 def createlisting(request):
     if request.method == "POST":
         title = request.POST['title']
@@ -164,6 +209,7 @@ def category(request, category):
         'category': category
     })
 
+@login_required(login_url='/login/') 
 def watchlist(request):
     
     #get user Id
